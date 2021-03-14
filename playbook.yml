@@ -1,0 +1,53 @@
+---
+- hosts: localhost
+  become: yes
+  tasks:
+  - name: 'apt update'
+    apt:
+      update_cache: yes
+      cache_valid_time: 3600
+
+  - name: 'install wordpress requerments'
+    apt:
+      name:
+        - 'nginx'
+        - 'php-fpm'
+        - 'php-mysql'
+        - 'mysql-server'
+        - 'unzip'
+      state: 'present'
+  - name: 'download wordpress'
+    unarchive:
+      src: 'https://wordpress.org/latest.zip'
+      dest: '/opt'
+      remote_src: true
+  - name: 'install python requiarments'
+    pip:
+      name: 'PyMySQL'
+      state: 'present'
+  - name: 'create database'
+    mysql_db:
+      login_unix_socket: '/var/run/mysqld/mysqld.sock'
+      name: 'wordpress_db'
+      state: 'present'
+  - name: 'create db user'
+    mysql_user:
+      login_unix_socket: '/var/run/mysqld/mysqld.sock'
+      name: 'wordpress_user'
+      password: 'qwerty'
+      state: 'present'
+      priv: 'wordpress_db.*:ALL,GRANT'
+  - name: 'Upload wp-config file into wordpress folder'
+    copy:
+      src: 'wp-config.php'
+      dest: '/var/www/html/wordpress/wp-config.php'
+      owner: 'www-data'
+      group: 'www-data'
+  - name: 'upload nginx config'
+    copy:
+      src: 'nginx.conf'
+      dest: '/etc/nginx/sites-available/default'                                                                      
+  - name: 'reload nginx'
+    service:
+      name: 'nginx'
+      state: 'restarted'
